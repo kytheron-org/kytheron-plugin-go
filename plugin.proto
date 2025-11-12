@@ -1,0 +1,81 @@
+syntax = "proto3";
+package plugins;
+option go_package = "./plugin";
+
+// Source plugin is a client, that initiates streaming with the
+// Kytheron server
+ // Source Plugin - handles reading logs from various sources
+service SourcePlugin {
+  rpc GetMetadata(Empty) returns (SourceMetadata);
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+  rpc ReadLogs(ReadLogsRequest) returns (stream RawLog);
+}
+
+// Parser plugin is a server, and responds to requests from Kytheron
+// Parser Plugin - handles parsing different log formats
+service ParserPlugin {
+  rpc GetMetadata(Empty) returns (ParserMetadata);
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+  rpc ParseLog(RawLog) returns (ParsedLog);
+}
+
+// Output plugin is a server, and responds to requests from Kytheron
+ // Output Plugin - handles sending logs to destinations.
+service OutputPlugin {
+  rpc GetMetadata(Empty) returns (OutputMetadata);
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+  rpc Emit() returns (EmitResponse);
+//  rpc Write(stream ParsedLog) returns (stream WriteResponse);
+//  rpc Flush(Empty) returns (FlushResponse);
+}
+
+message Empty {}
+
+message SourceMetadata {
+  string name = 1;
+  string version = 2;
+  repeated string supported_protocols = 3; // e.g., "file", "s3", "http"
+}
+
+message ParserMetadata {
+  string name = 1;
+  string version = 2;
+  repeated string supported_formats = 3; // e.g., "cloudtrail", "access_log", "systemd"
+}
+
+message OutputMetadata {
+  string name = 1;
+  string version = 2;
+  repeated string supported_destinations = 3; // e.g., "elasticsearch", "s3", "kafka", "console"
+  bool supports_batching = 4;
+}
+
+message ConfigureRequest {
+  map<string, string> config = 1;
+}
+
+message ConfigureResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message ReadLogsRequest {
+  map<string, string> params = 1; // e.g., {"path": "/var/log/app.log"}
+}
+
+message RawLog {
+  bytes data = 1;
+  map<string, string> metadata = 2; // source info, timestamps, etc.
+}
+
+message ParsedLog {
+  string source_type = 1;
+  string source_name = 2;
+  bytes data = 3; // JSON formatted
+  bool success = 4;
+  string error = 5;
+}
+
+message EmitResponse {
+  
+}
