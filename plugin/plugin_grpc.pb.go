@@ -24,7 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type SourcePluginClient interface {
 	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SourceMetadata, error)
 	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
-	ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (SourcePlugin_ReadLogsClient, error)
+	ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error)
 }
 
 type sourcePluginClient struct {
@@ -53,36 +53,13 @@ func (c *sourcePluginClient) Configure(ctx context.Context, in *ConfigureRequest
 	return out, nil
 }
 
-func (c *sourcePluginClient) ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (SourcePlugin_ReadLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SourcePlugin_ServiceDesc.Streams[0], "/plugins.SourcePlugin/ReadLogs", opts...)
+func (c *sourcePluginClient) ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error) {
+	out := new(RawLog)
+	err := c.cc.Invoke(ctx, "/plugins.SourcePlugin/ReadLogs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &sourcePluginReadLogsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type SourcePlugin_ReadLogsClient interface {
-	Recv() (*RawLog, error)
-	grpc.ClientStream
-}
-
-type sourcePluginReadLogsClient struct {
-	grpc.ClientStream
-}
-
-func (x *sourcePluginReadLogsClient) Recv() (*RawLog, error) {
-	m := new(RawLog)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // SourcePluginServer is the server API for SourcePlugin service.
@@ -91,7 +68,7 @@ func (x *sourcePluginReadLogsClient) Recv() (*RawLog, error) {
 type SourcePluginServer interface {
 	GetMetadata(context.Context, *Empty) (*SourceMetadata, error)
 	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
-	ReadLogs(*ReadLogsRequest, SourcePlugin_ReadLogsServer) error
+	ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error)
 	mustEmbedUnimplementedSourcePluginServer()
 }
 
@@ -105,8 +82,8 @@ func (UnimplementedSourcePluginServer) GetMetadata(context.Context, *Empty) (*So
 func (UnimplementedSourcePluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
 }
-func (UnimplementedSourcePluginServer) ReadLogs(*ReadLogsRequest, SourcePlugin_ReadLogsServer) error {
-	return status.Errorf(codes.Unimplemented, "method ReadLogs not implemented")
+func (UnimplementedSourcePluginServer) ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadLogs not implemented")
 }
 func (UnimplementedSourcePluginServer) mustEmbedUnimplementedSourcePluginServer() {}
 
@@ -157,25 +134,22 @@ func _SourcePlugin_Configure_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SourcePlugin_ReadLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ReadLogsRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _SourcePlugin_ReadLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(SourcePluginServer).ReadLogs(m, &sourcePluginReadLogsServer{stream})
-}
-
-type SourcePlugin_ReadLogsServer interface {
-	Send(*RawLog) error
-	grpc.ServerStream
-}
-
-type sourcePluginReadLogsServer struct {
-	grpc.ServerStream
-}
-
-func (x *sourcePluginReadLogsServer) Send(m *RawLog) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(SourcePluginServer).ReadLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugins.SourcePlugin/ReadLogs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SourcePluginServer).ReadLogs(ctx, req.(*ReadLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // SourcePlugin_ServiceDesc is the grpc.ServiceDesc for SourcePlugin service.
@@ -193,14 +167,12 @@ var SourcePlugin_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Configure",
 			Handler:    _SourcePlugin_Configure_Handler,
 		},
-	},
-	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ReadLogs",
-			Handler:       _SourcePlugin_ReadLogs_Handler,
-			ServerStreams: true,
+			MethodName: "ReadLogs",
+			Handler:    _SourcePlugin_ReadLogs_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "plugin.proto",
 }
 
@@ -210,7 +182,7 @@ var SourcePlugin_ServiceDesc = grpc.ServiceDesc{
 type ParserPluginClient interface {
 	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ParserMetadata, error)
 	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
-	ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (*ParsedLog, error)
+	ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (ParserPlugin_ParseLogClient, error)
 }
 
 type parserPluginClient struct {
@@ -239,13 +211,36 @@ func (c *parserPluginClient) Configure(ctx context.Context, in *ConfigureRequest
 	return out, nil
 }
 
-func (c *parserPluginClient) ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (*ParsedLog, error) {
-	out := new(ParsedLog)
-	err := c.cc.Invoke(ctx, "/plugins.ParserPlugin/ParseLog", in, out, opts...)
+func (c *parserPluginClient) ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (ParserPlugin_ParseLogClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ParserPlugin_ServiceDesc.Streams[0], "/plugins.ParserPlugin/ParseLog", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &parserPluginParseLogClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ParserPlugin_ParseLogClient interface {
+	Recv() (*ParsedLog, error)
+	grpc.ClientStream
+}
+
+type parserPluginParseLogClient struct {
+	grpc.ClientStream
+}
+
+func (x *parserPluginParseLogClient) Recv() (*ParsedLog, error) {
+	m := new(ParsedLog)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ParserPluginServer is the server API for ParserPlugin service.
@@ -254,7 +249,7 @@ func (c *parserPluginClient) ParseLog(ctx context.Context, in *RawLog, opts ...g
 type ParserPluginServer interface {
 	GetMetadata(context.Context, *Empty) (*ParserMetadata, error)
 	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
-	ParseLog(context.Context, *RawLog) (*ParsedLog, error)
+	ParseLog(*RawLog, ParserPlugin_ParseLogServer) error
 	mustEmbedUnimplementedParserPluginServer()
 }
 
@@ -268,8 +263,8 @@ func (UnimplementedParserPluginServer) GetMetadata(context.Context, *Empty) (*Pa
 func (UnimplementedParserPluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
 }
-func (UnimplementedParserPluginServer) ParseLog(context.Context, *RawLog) (*ParsedLog, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ParseLog not implemented")
+func (UnimplementedParserPluginServer) ParseLog(*RawLog, ParserPlugin_ParseLogServer) error {
+	return status.Errorf(codes.Unimplemented, "method ParseLog not implemented")
 }
 func (UnimplementedParserPluginServer) mustEmbedUnimplementedParserPluginServer() {}
 
@@ -320,22 +315,25 @@ func _ParserPlugin_Configure_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ParserPlugin_ParseLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RawLog)
-	if err := dec(in); err != nil {
-		return nil, err
+func _ParserPlugin_ParseLog_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RawLog)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ParserPluginServer).ParseLog(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.ParserPlugin/ParseLog",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ParserPluginServer).ParseLog(ctx, req.(*RawLog))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ParserPluginServer).ParseLog(m, &parserPluginParseLogServer{stream})
+}
+
+type ParserPlugin_ParseLogServer interface {
+	Send(*ParsedLog) error
+	grpc.ServerStream
+}
+
+type parserPluginParseLogServer struct {
+	grpc.ServerStream
+}
+
+func (x *parserPluginParseLogServer) Send(m *ParsedLog) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // ParserPlugin_ServiceDesc is the grpc.ServiceDesc for ParserPlugin service.
@@ -353,12 +351,14 @@ var ParserPlugin_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Configure",
 			Handler:    _ParserPlugin_Configure_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "ParseLog",
-			Handler:    _ParserPlugin_ParseLog_Handler,
+			StreamName:    "ParseLog",
+			Handler:       _ParserPlugin_ParseLog_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "plugin.proto",
 }
 

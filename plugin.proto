@@ -8,7 +8,7 @@ option go_package = "./plugin";
 service SourcePlugin {
   rpc GetMetadata(Empty) returns (SourceMetadata);
   rpc Configure(ConfigureRequest) returns (ConfigureResponse);
-  rpc ReadLogs(ReadLogsRequest) returns (stream RawLog);
+  rpc ReadLogs(ReadLogsRequest) returns (RawLog);
 }
 
 // Parser plugin is a server, and responds to requests from Kytheron
@@ -16,7 +16,7 @@ service SourcePlugin {
 service ParserPlugin {
   rpc GetMetadata(Empty) returns (ParserMetadata);
   rpc Configure(ConfigureRequest) returns (ConfigureResponse);
-  rpc ParseLog(RawLog) returns (ParsedLog);
+  rpc ParseLog(RawLog) returns (stream ParsedLog);
 }
 
 // Output plugin is a server, and responds to requests from Kytheron
