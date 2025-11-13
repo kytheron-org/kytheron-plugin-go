@@ -368,6 +368,7 @@ var ParserPlugin_ServiceDesc = grpc.ServiceDesc{
 type OutputPluginClient interface {
 	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*OutputMetadata, error)
 	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
+	Trigger(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error)
 }
 
 type outputPluginClient struct {
@@ -396,12 +397,22 @@ func (c *outputPluginClient) Configure(ctx context.Context, in *ConfigureRequest
 	return out, nil
 }
 
+func (c *outputPluginClient) Trigger(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error) {
+	out := new(EvaluationResponse)
+	err := c.cc.Invoke(ctx, "/plugins.OutputPlugin/Trigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OutputPluginServer is the server API for OutputPlugin service.
 // All implementations must embed UnimplementedOutputPluginServer
 // for forward compatibility
 type OutputPluginServer interface {
 	GetMetadata(context.Context, *Empty) (*OutputMetadata, error)
 	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
+	Trigger(context.Context, *EvaluationRequest) (*EvaluationResponse, error)
 	mustEmbedUnimplementedOutputPluginServer()
 }
 
@@ -414,6 +425,9 @@ func (UnimplementedOutputPluginServer) GetMetadata(context.Context, *Empty) (*Ou
 }
 func (UnimplementedOutputPluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
+}
+func (UnimplementedOutputPluginServer) Trigger(context.Context, *EvaluationRequest) (*EvaluationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Trigger not implemented")
 }
 func (UnimplementedOutputPluginServer) mustEmbedUnimplementedOutputPluginServer() {}
 
@@ -464,6 +478,24 @@ func _OutputPlugin_Configure_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OutputPlugin_Trigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OutputPluginServer).Trigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugins.OutputPlugin/Trigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OutputPluginServer).Trigger(ctx, req.(*EvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OutputPlugin_ServiceDesc is the grpc.ServiceDesc for OutputPlugin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -478,6 +510,10 @@ var OutputPlugin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Configure",
 			Handler:    _OutputPlugin_Configure_Handler,
+		},
+		{
+			MethodName: "Trigger",
+			Handler:    _OutputPlugin_Trigger_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

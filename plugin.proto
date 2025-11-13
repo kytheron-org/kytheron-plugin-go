@@ -20,10 +20,12 @@ service ParserPlugin {
 }
 
 // Output plugin is a server, and responds to requests from Kytheron
- // Output Plugin - handles sending logs to destinations.
+ // Output Plugin - handles evaluation outputs
 service OutputPlugin {
   rpc GetMetadata(Empty) returns (OutputMetadata);
   rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+  rpc Trigger(EvaluationRequest) returns (EvaluationResponse);
+
   //rpc Emit returns (EmitResponse);
 //  rpc Write(stream ParsedLog) returns (stream WriteResponse);
 //  rpc Flush(Empty) returns (FlushResponse);
@@ -76,6 +78,11 @@ message ParsedLog {
   string error = 5;
 }
 
-message EmitResponse {
+message EvaluationRequest {
+  repeated ParsedLog logs = 1;
+  string policy_name = 2;
+}
+
+message EvaluationResponse {
 
 }
