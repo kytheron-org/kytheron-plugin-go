@@ -18,12 +18,132 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
+// PluginClient is the client API for Plugin service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type PluginClient interface {
+	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Metadata, error)
+	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
+}
+
+type pluginClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewPluginClient(cc grpc.ClientConnInterface) PluginClient {
+	return &pluginClient{cc}
+}
+
+func (c *pluginClient) GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Metadata, error) {
+	out := new(Metadata)
+	err := c.cc.Invoke(ctx, "/plugins.Plugin/GetMetadata", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pluginClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error) {
+	out := new(ConfigureResponse)
+	err := c.cc.Invoke(ctx, "/plugins.Plugin/Configure", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PluginServer is the server API for Plugin service.
+// All implementations must embed UnimplementedPluginServer
+// for forward compatibility
+type PluginServer interface {
+	GetMetadata(context.Context, *Empty) (*Metadata, error)
+	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
+	mustEmbedUnimplementedPluginServer()
+}
+
+// UnimplementedPluginServer must be embedded to have forward compatible implementations.
+type UnimplementedPluginServer struct {
+}
+
+func (UnimplementedPluginServer) GetMetadata(context.Context, *Empty) (*Metadata, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
+}
+func (UnimplementedPluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
+}
+func (UnimplementedPluginServer) mustEmbedUnimplementedPluginServer() {}
+
+// UnsafePluginServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PluginServer will
+// result in compilation errors.
+type UnsafePluginServer interface {
+	mustEmbedUnimplementedPluginServer()
+}
+
+func RegisterPluginServer(s grpc.ServiceRegistrar, srv PluginServer) {
+	s.RegisterService(&Plugin_ServiceDesc, srv)
+}
+
+func _Plugin_GetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServer).GetMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugins.Plugin/GetMetadata",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServer).GetMetadata(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Plugin_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServer).Configure(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugins.Plugin/Configure",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServer).Configure(ctx, req.(*ConfigureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Plugin_ServiceDesc is the grpc.ServiceDesc for Plugin service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Plugin_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "plugins.Plugin",
+	HandlerType: (*PluginServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetMetadata",
+			Handler:    _Plugin_GetMetadata_Handler,
+		},
+		{
+			MethodName: "Configure",
+			Handler:    _Plugin_Configure_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "plugin.proto",
+}
+
 // SourcePluginClient is the client API for SourcePlugin service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SourcePluginClient interface {
-	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SourceMetadata, error)
-	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
 	ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error)
 }
 
@@ -33,24 +153,6 @@ type sourcePluginClient struct {
 
 func NewSourcePluginClient(cc grpc.ClientConnInterface) SourcePluginClient {
 	return &sourcePluginClient{cc}
-}
-
-func (c *sourcePluginClient) GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SourceMetadata, error) {
-	out := new(SourceMetadata)
-	err := c.cc.Invoke(ctx, "/plugins.SourcePlugin/GetMetadata", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sourcePluginClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error) {
-	out := new(ConfigureResponse)
-	err := c.cc.Invoke(ctx, "/plugins.SourcePlugin/Configure", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *sourcePluginClient) ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error) {
@@ -66,8 +168,6 @@ func (c *sourcePluginClient) ReadLogs(ctx context.Context, in *ReadLogsRequest, 
 // All implementations must embed UnimplementedSourcePluginServer
 // for forward compatibility
 type SourcePluginServer interface {
-	GetMetadata(context.Context, *Empty) (*SourceMetadata, error)
-	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
 	ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error)
 	mustEmbedUnimplementedSourcePluginServer()
 }
@@ -76,12 +176,6 @@ type SourcePluginServer interface {
 type UnimplementedSourcePluginServer struct {
 }
 
-func (UnimplementedSourcePluginServer) GetMetadata(context.Context, *Empty) (*SourceMetadata, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
-}
-func (UnimplementedSourcePluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
-}
 func (UnimplementedSourcePluginServer) ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadLogs not implemented")
 }
@@ -96,42 +190,6 @@ type UnsafeSourcePluginServer interface {
 
 func RegisterSourcePluginServer(s grpc.ServiceRegistrar, srv SourcePluginServer) {
 	s.RegisterService(&SourcePlugin_ServiceDesc, srv)
-}
-
-func _SourcePlugin_GetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SourcePluginServer).GetMetadata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.SourcePlugin/GetMetadata",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SourcePluginServer).GetMetadata(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SourcePlugin_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfigureRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SourcePluginServer).Configure(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.SourcePlugin/Configure",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SourcePluginServer).Configure(ctx, req.(*ConfigureRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _SourcePlugin_ReadLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -160,14 +218,6 @@ var SourcePlugin_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*SourcePluginServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetMetadata",
-			Handler:    _SourcePlugin_GetMetadata_Handler,
-		},
-		{
-			MethodName: "Configure",
-			Handler:    _SourcePlugin_Configure_Handler,
-		},
-		{
 			MethodName: "ReadLogs",
 			Handler:    _SourcePlugin_ReadLogs_Handler,
 		},
@@ -180,8 +230,6 @@ var SourcePlugin_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ParserPluginClient interface {
-	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ParserMetadata, error)
-	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
 	ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (ParserPlugin_ParseLogClient, error)
 }
 
@@ -191,24 +239,6 @@ type parserPluginClient struct {
 
 func NewParserPluginClient(cc grpc.ClientConnInterface) ParserPluginClient {
 	return &parserPluginClient{cc}
-}
-
-func (c *parserPluginClient) GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ParserMetadata, error) {
-	out := new(ParserMetadata)
-	err := c.cc.Invoke(ctx, "/plugins.ParserPlugin/GetMetadata", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *parserPluginClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error) {
-	out := new(ConfigureResponse)
-	err := c.cc.Invoke(ctx, "/plugins.ParserPlugin/Configure", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *parserPluginClient) ParseLog(ctx context.Context, in *RawLog, opts ...grpc.CallOption) (ParserPlugin_ParseLogClient, error) {
@@ -247,8 +277,6 @@ func (x *parserPluginParseLogClient) Recv() (*ParsedLog, error) {
 // All implementations must embed UnimplementedParserPluginServer
 // for forward compatibility
 type ParserPluginServer interface {
-	GetMetadata(context.Context, *Empty) (*ParserMetadata, error)
-	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
 	ParseLog(*RawLog, ParserPlugin_ParseLogServer) error
 	mustEmbedUnimplementedParserPluginServer()
 }
@@ -257,12 +285,6 @@ type ParserPluginServer interface {
 type UnimplementedParserPluginServer struct {
 }
 
-func (UnimplementedParserPluginServer) GetMetadata(context.Context, *Empty) (*ParserMetadata, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
-}
-func (UnimplementedParserPluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
-}
 func (UnimplementedParserPluginServer) ParseLog(*RawLog, ParserPlugin_ParseLogServer) error {
 	return status.Errorf(codes.Unimplemented, "method ParseLog not implemented")
 }
@@ -277,42 +299,6 @@ type UnsafeParserPluginServer interface {
 
 func RegisterParserPluginServer(s grpc.ServiceRegistrar, srv ParserPluginServer) {
 	s.RegisterService(&ParserPlugin_ServiceDesc, srv)
-}
-
-func _ParserPlugin_GetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ParserPluginServer).GetMetadata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.ParserPlugin/GetMetadata",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ParserPluginServer).GetMetadata(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ParserPlugin_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfigureRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ParserPluginServer).Configure(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.ParserPlugin/Configure",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ParserPluginServer).Configure(ctx, req.(*ConfigureRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _ParserPlugin_ParseLog_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -342,16 +328,7 @@ func (x *parserPluginParseLogServer) Send(m *ParsedLog) error {
 var ParserPlugin_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "plugins.ParserPlugin",
 	HandlerType: (*ParserPluginServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetMetadata",
-			Handler:    _ParserPlugin_GetMetadata_Handler,
-		},
-		{
-			MethodName: "Configure",
-			Handler:    _ParserPlugin_Configure_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ParseLog",
@@ -366,9 +343,7 @@ var ParserPlugin_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OutputPluginClient interface {
-	GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*OutputMetadata, error)
-	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
-	Trigger(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error)
+	Proc(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error)
 }
 
 type outputPluginClient struct {
@@ -379,27 +354,9 @@ func NewOutputPluginClient(cc grpc.ClientConnInterface) OutputPluginClient {
 	return &outputPluginClient{cc}
 }
 
-func (c *outputPluginClient) GetMetadata(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*OutputMetadata, error) {
-	out := new(OutputMetadata)
-	err := c.cc.Invoke(ctx, "/plugins.OutputPlugin/GetMetadata", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *outputPluginClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error) {
-	out := new(ConfigureResponse)
-	err := c.cc.Invoke(ctx, "/plugins.OutputPlugin/Configure", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *outputPluginClient) Trigger(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error) {
+func (c *outputPluginClient) Proc(ctx context.Context, in *EvaluationRequest, opts ...grpc.CallOption) (*EvaluationResponse, error) {
 	out := new(EvaluationResponse)
-	err := c.cc.Invoke(ctx, "/plugins.OutputPlugin/Trigger", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/plugins.OutputPlugin/Proc", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -410,9 +367,7 @@ func (c *outputPluginClient) Trigger(ctx context.Context, in *EvaluationRequest,
 // All implementations must embed UnimplementedOutputPluginServer
 // for forward compatibility
 type OutputPluginServer interface {
-	GetMetadata(context.Context, *Empty) (*OutputMetadata, error)
-	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
-	Trigger(context.Context, *EvaluationRequest) (*EvaluationResponse, error)
+	Proc(context.Context, *EvaluationRequest) (*EvaluationResponse, error)
 	mustEmbedUnimplementedOutputPluginServer()
 }
 
@@ -420,14 +375,8 @@ type OutputPluginServer interface {
 type UnimplementedOutputPluginServer struct {
 }
 
-func (UnimplementedOutputPluginServer) GetMetadata(context.Context, *Empty) (*OutputMetadata, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
-}
-func (UnimplementedOutputPluginServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
-}
-func (UnimplementedOutputPluginServer) Trigger(context.Context, *EvaluationRequest) (*EvaluationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Trigger not implemented")
+func (UnimplementedOutputPluginServer) Proc(context.Context, *EvaluationRequest) (*EvaluationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Proc not implemented")
 }
 func (UnimplementedOutputPluginServer) mustEmbedUnimplementedOutputPluginServer() {}
 
@@ -442,56 +391,20 @@ func RegisterOutputPluginServer(s grpc.ServiceRegistrar, srv OutputPluginServer)
 	s.RegisterService(&OutputPlugin_ServiceDesc, srv)
 }
 
-func _OutputPlugin_GetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OutputPluginServer).GetMetadata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.OutputPlugin/GetMetadata",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OutputPluginServer).GetMetadata(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OutputPlugin_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfigureRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OutputPluginServer).Configure(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.OutputPlugin/Configure",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OutputPluginServer).Configure(ctx, req.(*ConfigureRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OutputPlugin_Trigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _OutputPlugin_Proc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EvaluationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OutputPluginServer).Trigger(ctx, in)
+		return srv.(OutputPluginServer).Proc(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/plugins.OutputPlugin/Trigger",
+		FullMethod: "/plugins.OutputPlugin/Proc",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OutputPluginServer).Trigger(ctx, req.(*EvaluationRequest))
+		return srv.(OutputPluginServer).Proc(ctx, req.(*EvaluationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -504,16 +417,8 @@ var OutputPlugin_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*OutputPluginServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetMetadata",
-			Handler:    _OutputPlugin_GetMetadata_Handler,
-		},
-		{
-			MethodName: "Configure",
-			Handler:    _OutputPlugin_Configure_Handler,
-		},
-		{
-			MethodName: "Trigger",
-			Handler:    _OutputPlugin_Trigger_Handler,
+			MethodName: "Proc",
+			Handler:    _OutputPlugin_Proc_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
