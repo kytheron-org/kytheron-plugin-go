@@ -144,7 +144,7 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SourcePluginClient interface {
-	ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error)
+	StreamLogs(ctx context.Context, opts ...grpc.CallOption) (SourcePlugin_StreamLogsClient, error)
 }
 
 type sourcePluginClient struct {
@@ -155,20 +155,45 @@ func NewSourcePluginClient(cc grpc.ClientConnInterface) SourcePluginClient {
 	return &sourcePluginClient{cc}
 }
 
-func (c *sourcePluginClient) ReadLogs(ctx context.Context, in *ReadLogsRequest, opts ...grpc.CallOption) (*RawLog, error) {
-	out := new(RawLog)
-	err := c.cc.Invoke(ctx, "/plugins.SourcePlugin/ReadLogs", in, out, opts...)
+func (c *sourcePluginClient) StreamLogs(ctx context.Context, opts ...grpc.CallOption) (SourcePlugin_StreamLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SourcePlugin_ServiceDesc.Streams[0], "/plugins.SourcePlugin/StreamLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &sourcePluginStreamLogsClient{stream}
+	return x, nil
+}
+
+type SourcePlugin_StreamLogsClient interface {
+	Send(*RawLog) error
+	CloseAndRecv() (*Empty, error)
+	grpc.ClientStream
+}
+
+type sourcePluginStreamLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *sourcePluginStreamLogsClient) Send(m *RawLog) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *sourcePluginStreamLogsClient) CloseAndRecv() (*Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // SourcePluginServer is the server API for SourcePlugin service.
 // All implementations must embed UnimplementedSourcePluginServer
 // for forward compatibility
 type SourcePluginServer interface {
-	ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error)
+	StreamLogs(SourcePlugin_StreamLogsServer) error
 	mustEmbedUnimplementedSourcePluginServer()
 }
 
@@ -176,8 +201,8 @@ type SourcePluginServer interface {
 type UnimplementedSourcePluginServer struct {
 }
 
-func (UnimplementedSourcePluginServer) ReadLogs(context.Context, *ReadLogsRequest) (*RawLog, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadLogs not implemented")
+func (UnimplementedSourcePluginServer) StreamLogs(SourcePlugin_StreamLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamLogs not implemented")
 }
 func (UnimplementedSourcePluginServer) mustEmbedUnimplementedSourcePluginServer() {}
 
@@ -192,22 +217,30 @@ func RegisterSourcePluginServer(s grpc.ServiceRegistrar, srv SourcePluginServer)
 	s.RegisterService(&SourcePlugin_ServiceDesc, srv)
 }
 
-func _SourcePlugin_ReadLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadLogsRequest)
-	if err := dec(in); err != nil {
+func _SourcePlugin_StreamLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SourcePluginServer).StreamLogs(&sourcePluginStreamLogsServer{stream})
+}
+
+type SourcePlugin_StreamLogsServer interface {
+	SendAndClose(*Empty) error
+	Recv() (*RawLog, error)
+	grpc.ServerStream
+}
+
+type sourcePluginStreamLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *sourcePluginStreamLogsServer) SendAndClose(m *Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *sourcePluginStreamLogsServer) Recv() (*RawLog, error) {
+	m := new(RawLog)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(SourcePluginServer).ReadLogs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plugins.SourcePlugin/ReadLogs",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SourcePluginServer).ReadLogs(ctx, req.(*ReadLogsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // SourcePlugin_ServiceDesc is the grpc.ServiceDesc for SourcePlugin service.
@@ -216,13 +249,14 @@ func _SourcePlugin_ReadLogs_Handler(srv interface{}, ctx context.Context, dec fu
 var SourcePlugin_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "plugins.SourcePlugin",
 	HandlerType: (*SourcePluginServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "ReadLogs",
-			Handler:    _SourcePlugin_ReadLogs_Handler,
+			StreamName:    "StreamLogs",
+			Handler:       _SourcePlugin_StreamLogs_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "plugin.proto",
 }
 

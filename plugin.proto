@@ -12,7 +12,7 @@ service Plugin {
 // Kytheron server
  // Source Plugin - handles reading logs from various sources
 service SourcePlugin {
-  rpc ReadLogs(ReadLogsRequest) returns (RawLog);
+  rpc StreamLogs(stream RawLog) returns (Empty);
 }
 
 // Parser plugin is a server, and responds to requests from Kytheron
