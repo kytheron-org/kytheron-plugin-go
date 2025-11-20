@@ -50,7 +50,7 @@ message ReadLogsRequest {
 
 message RawLog {
   string id = 1;
-  bytes data = 2;
+  string data = 2;
   map<string, string> metadata = 3; // source info, timestamps, etc.
 }
 
@@ -59,7 +59,7 @@ message ParsedLog {
   string source_id = 2;
   string source_type = 3;
   string source_name = 4;
-  bytes data = 5; // JSON formatted
+  string data = 5; // JSON formatted
   bool success = 6;
   string error = 7;
 }
